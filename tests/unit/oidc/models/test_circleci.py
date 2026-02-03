@@ -124,15 +124,37 @@ class TestCircleCIPublisher:
 
         assert publisher.publisher_url() is None
 
-    def test_attestation_identity(self):
+    @pytest.mark.parametrize(
+        ("vcs_origin", "vcs_ref"),
+        [
+            ("", ""),
+            (VCS_ORIGIN, ""),
+            ("", VCS_REF),
+            (VCS_ORIGIN, VCS_REF),
+        ],
+    )
+    def test_attestation_identity(self, vcs_origin, vcs_ref):
         publisher = CircleCIPublisher(
             circleci_org_id=ORG_ID,
             circleci_project_id=PROJECT_ID,
             pipeline_definition_id=PIPELINE_DEF_ID,
+            vcs_origin=vcs_origin,
+            vcs_ref=vcs_ref,
         )
 
-        # CircleCI attestations pending pypi-attestations library support
-        assert publisher.attestation_identity is None
+        identity = publisher.attestation_identity
+        assert identity.project_id == PROJECT_ID
+        assert identity.pipeline_definition_id == PIPELINE_DEF_ID
+
+        if not vcs_origin:
+            assert identity.vcs_origin is None
+        else:
+            assert identity.vcs_origin == vcs_origin
+
+        if not vcs_ref:
+            assert identity.vcs_ref is None
+        else:
+            assert identity.vcs_ref == vcs_ref
 
     def test_str(self):
         publisher = CircleCIPublisher(
