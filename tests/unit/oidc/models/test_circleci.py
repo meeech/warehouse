@@ -122,7 +122,25 @@ class TestCircleCIPublisher:
             pipeline_definition_id=PIPELINE_DEF_ID,
         )
 
+        # No claims - no URL
         assert publisher.publisher_url() is None
+
+        # With OIDC claims (namespaced keys)
+        claims = new_signed_claims()
+        assert (
+            publisher.publisher_url(claims)
+            == "https://app.circleci.com/workflow/fake-workflow-id/job/fake-job-id"
+        )
+
+        # With stored claims (short keys)
+        stored = {"workflow_id": "stored-workflow", "job_id": "stored-job"}
+        assert (
+            publisher.publisher_url(stored)
+            == "https://app.circleci.com/workflow/stored-workflow/job/stored-job"
+        )
+
+        # Missing job_id returns None
+        assert publisher.publisher_url({"workflow_id": "wf"}) is None
 
     @pytest.mark.parametrize(
         ("vcs_origin", "vcs_ref"),
@@ -251,8 +269,11 @@ class TestCircleCIPublisher:
             pipeline_definition_id=PIPELINE_DEF_ID,
         )
 
-        assert publisher.stored_claims() == {}
-        assert publisher.stored_claims(new_signed_claims()) == {}
+        assert publisher.stored_claims() == {"job_id": None, "workflow_id": None}
+        assert publisher.stored_claims(new_signed_claims()) == {
+            "job_id": "fake-job-id",
+            "workflow_id": "fake-workflow-id",
+        }
 
     def test_ssh_rerun_property(self):
         publisher = CircleCIPublisher(

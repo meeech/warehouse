@@ -116,7 +116,15 @@ class CircleCIPublisherMixin:
         return None
 
     def publisher_url(self, claims: SignedClaims | None = None) -> str | None:
-        return self.publisher_base_url
+        if claims:
+            # Claims can be raw OIDC (namespaced) or stored (short keys)
+            workflow_id = claims.get(
+                "oidc.circleci.com/workflow-id"
+            ) or claims.get("workflow_id")
+            job_id = claims.get("oidc.circleci.com/job-id") or claims.get("job_id")
+            if workflow_id and job_id:
+                return f"https://app.circleci.com/workflow/{workflow_id}/job/{job_id}"
+        return None
 
     @property
     def attestation_identity(self) -> CircleCIIdentity:
@@ -128,7 +136,11 @@ class CircleCIPublisherMixin:
         )
 
     def stored_claims(self, claims: SignedClaims | None = None) -> dict:
-        return {}
+        claims_obj = claims if claims else {}
+        return {
+            "job_id": claims_obj.get("oidc.circleci.com/job-id"),
+            "workflow_id": claims_obj.get("oidc.circleci.com/workflow-id"),
+        }
 
     def __str__(self) -> str:
         return (
