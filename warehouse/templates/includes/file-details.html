@@ -33,7 +33,16 @@
   <code>{{ publ.email }}</code>
 </span>
 </p>
+{% elif publ.kind == "CircleCI" %}
+<p>
+  <!-- https://github.com/FortAwesome/Font-Awesome/discussions/21459 -->
+  Publisher: <a href="https://app.circleci.com/project/{{ publ.project_id }}">
+    <i class="fa-regular fa-circle" aria-hidden="true"></i>
+    <code>app.circleci.com/project/{{ publ.project_id }}</code>
+  </a>
+</p>
 {% endif %}
+
 {%- endmacro %}
 <div id="{{ file.filename }}"
      data-project-tabs-target="content"
@@ -202,8 +211,30 @@
                 Service Account: <code>{{ viewer.publisher.email }}</code>
               </li>
             {% endif %}
-            {% if viewer.environment %}
+            {% if viewer.publisher.kind == "CircleCI" %}
               <li>
+                Build Signer URI: <a href="{{ viewer.build_signer_uri }}"><code>{{ viewer.build_signer_uri }}</code></a>
+              </li>
+              <li>
+                Build Config URI: <a href="{{ viewer.build_config_uri }}"><code>{{ viewer.build_config_uri }}</code></a>
+              </li>
+              <li>
+                Build Job that produced the artifact: <a href="{{ viewer.run_invocation_uri }}"><code>{{ viewer.run_invocation_uri }}</code></a>
+              </li>
+              {% if viewer.source %}
+              <li>
+                Source Repository URI: <a href="https://{{ viewer.source }}"><code>{{ viewer.source }}</code></a>
+              </li>
+              {% endif %}
+              {% if viewer.source_reference %}
+              <li>
+                Source Repository Ref: <code>{{ viewer.source_reference }}</code>
+              </li>
+              {% endif %}
+
+            {% endif %}
+            {% if viewer.environment %}
+            <li>
                 Runner Environment: <code>{{ viewer.environment }}</code>
               </li>
             {% endif %}

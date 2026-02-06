@@ -92,7 +92,7 @@ class PEP740AttestationViewer:
     def workflow_url(self) -> str:
         """Build Config URI with permalink to the exact version used."""
         repo_url = self.repository_url
-        workflow_url = self.claims.get("1.3.6.1.4.1.57264.1.18", "")
+        workflow_url = self.build_config_uri
         workflow_file_path = workflow_url.split("@")[0].replace(repo_url + "/", "")
         return f"{repo_url}/blob/{self.build_digest}/{workflow_file_path}"
 
@@ -105,6 +105,11 @@ class PEP740AttestationViewer:
     def issuer(self) -> str:
         """Issuer of the attestation."""
         return self.claims.get("1.3.6.1.4.1.57264.1.8", "")
+
+    @property
+    def build_signer_uri(self) -> str:
+        """Build Signer URI."""
+        return self.claims.get("1.3.6.1.4.1.57264.1.9", "")
 
     @property
     def environment(self) -> str:
@@ -132,9 +137,19 @@ class PEP740AttestationViewer:
         return self.claims.get("1.3.6.1.4.1.57264.1.16", "")
 
     @property
+    def build_config_uri(self) -> str:
+        """Source Repository Owner URI."""
+        return self.claims.get("1.3.6.1.4.1.57264.1.18", "")
+
+    @property
     def trigger(self) -> str:
         """Build Trigger."""
         return self.claims.get("1.3.6.1.4.1.57264.1.20", "")
+
+    @property
+    def run_invocation_uri(self) -> str:
+        """Run Invocation URI."""
+        return self.claims.get("1.3.6.1.4.1.57264.1.21", "")
 
     @property
     def access(self) -> str:
