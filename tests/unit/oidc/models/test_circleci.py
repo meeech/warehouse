@@ -113,7 +113,7 @@ class TestCircleCIPublisher:
         )
 
         # CircleCI doesn't have a predictable public URL pattern
-        assert publisher.publisher_base_url is None
+        assert publisher.publisher_base_url == "https://app.circleci.com"
 
     def test_publisher_url(self):
         publisher = CircleCIPublisher(
