@@ -110,10 +110,8 @@ class CircleCIPublisherMixin:
         return "CircleCI"
 
     @property
-    def publisher_base_url(self) -> str | None:
-        # CircleCI doesn't have a predictable public URL pattern for projects
-        # based on org-id/project-id (they're UUIDs)
-        return None
+    def publisher_base_url(self) -> str:
+        return "https://app.circleci.com"
 
     def publisher_url(self, claims: SignedClaims | None = None) -> str | None:
         if claims:
@@ -123,7 +121,7 @@ class CircleCIPublisherMixin:
             ) or claims.get("workflow_id")
             job_id = claims.get("oidc.circleci.com/job-id") or claims.get("job_id")
             if workflow_id and job_id:
-                return f"https://app.circleci.com/workflow/{workflow_id}/job/{job_id}"
+                return f"{self.publisher_base_url}/workflow/{workflow_id}/job/{job_id}"
         return None
 
     @property
