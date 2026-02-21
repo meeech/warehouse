@@ -8,7 +8,7 @@ from typing import Any, Self
 from uuid import UUID
 
 from more_itertools import first_true
-from pypi_attestations import Publisher
+from pypi_attestations import CircleCIPublisher as CircleCIIdentity
 from sqlalchemy import ForeignKey, String, UniqueConstraint, and_, exists
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, Query, mapped_column
@@ -110,24 +110,35 @@ class CircleCIPublisherMixin:
         return "CircleCI"
 
     @property
-    def publisher_base_url(self) -> str | None:
-        # CircleCI doesn't have a predictable public URL pattern for projects
-        # based on org-id/project-id (they're UUIDs)
-        return None
+    def publisher_base_url(self) -> str:
+        return "https://app.circleci.com"
 
     def publisher_url(self, claims: SignedClaims | None = None) -> str | None:
-        return self.publisher_base_url
-
-    @property
-    def attestation_identity(self) -> Publisher | None:
-        # CircleCI attestation support pending pypi-attestations library support.
-        # Fulcio supports CircleCI OIDC tokens, but pypi-attestations needs to add
-        # a CircleCIPublisher identity class before we can enable attestations.
-        # See: https://github.com/pypi/pypi-attestations
+        if claims:
+            # Claims can be raw OIDC (namespaced) or stored (short keys)
+            workflow_id = claims.get(
+                "oidc.circleci.com/workflow-id"
+            ) or claims.get("workflow_id")
+            job_id = claims.get("oidc.circleci.com/job-id") or claims.get("job_id")
+            if workflow_id and job_id:
+                return f"{self.publisher_base_url}/workflow/{workflow_id}/job/{job_id}"
         return None
 
+    @property
+    def attestation_identity(self) -> CircleCIIdentity:
+        return CircleCIIdentity(
+            project_id=self.circleci_project_id,
+            pipeline_definition_id=self.pipeline_definition_id,
+            vcs_origin=self.vcs_origin if self.vcs_origin else None,
+            vcs_ref=self.vcs_ref if self.vcs_ref else None,
+        )
+
     def stored_claims(self, claims: SignedClaims | None = None) -> dict:
-        return {}
+        claims_obj = claims if claims else {}
+        return {
+            "job_id": claims_obj.get("oidc.circleci.com/job-id"),
+            "workflow_id": claims_obj.get("oidc.circleci.com/workflow-id"),
+        }
 
     def __str__(self) -> str:
         return (

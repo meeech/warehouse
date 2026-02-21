@@ -113,7 +113,7 @@ class TestCircleCIPublisher:
         )
 
         # CircleCI doesn't have a predictable public URL pattern
-        assert publisher.publisher_base_url is None
+        assert publisher.publisher_base_url == "https://app.circleci.com"
 
     def test_publisher_url(self):
         publisher = CircleCIPublisher(
@@ -122,17 +122,57 @@ class TestCircleCIPublisher:
             pipeline_definition_id=PIPELINE_DEF_ID,
         )
 
+        # No claims - no URL
         assert publisher.publisher_url() is None
 
-    def test_attestation_identity(self):
+        # With OIDC claims (namespaced keys)
+        claims = new_signed_claims()
+        assert (
+            publisher.publisher_url(claims)
+            == "https://app.circleci.com/workflow/fake-workflow-id/job/fake-job-id"
+        )
+
+        # With stored claims (short keys)
+        stored = {"workflow_id": "stored-workflow", "job_id": "stored-job"}
+        assert (
+            publisher.publisher_url(stored)
+            == "https://app.circleci.com/workflow/stored-workflow/job/stored-job"
+        )
+
+        # Missing job_id returns None
+        assert publisher.publisher_url({"workflow_id": "wf"}) is None
+
+    @pytest.mark.parametrize(
+        ("vcs_origin", "vcs_ref"),
+        [
+            ("", ""),
+            (VCS_ORIGIN, ""),
+            ("", VCS_REF),
+            (VCS_ORIGIN, VCS_REF),
+        ],
+    )
+    def test_attestation_identity(self, vcs_origin, vcs_ref):
         publisher = CircleCIPublisher(
             circleci_org_id=ORG_ID,
             circleci_project_id=PROJECT_ID,
             pipeline_definition_id=PIPELINE_DEF_ID,
+            vcs_origin=vcs_origin,
+            vcs_ref=vcs_ref,
         )
 
-        # CircleCI attestations pending pypi-attestations library support
-        assert publisher.attestation_identity is None
+        identity = publisher.attestation_identity
+        assert identity.project_id == PROJECT_ID
+        assert identity.pipeline_definition_id == PIPELINE_DEF_ID
+
+        if not vcs_origin:
+            assert identity.vcs_origin is None
+        else:
+            assert identity.vcs_origin == vcs_origin
+
+        if not vcs_ref:
+            assert identity.vcs_ref is None
+        else:
+            assert identity.vcs_ref == vcs_ref
 
     def test_str(self):
         publisher = CircleCIPublisher(
@@ -229,8 +269,11 @@ class TestCircleCIPublisher:
             pipeline_definition_id=PIPELINE_DEF_ID,
         )
 
-        assert publisher.stored_claims() == {}
-        assert publisher.stored_claims(new_signed_claims()) == {}
+        assert publisher.stored_claims() == {"job_id": None, "workflow_id": None}
+        assert publisher.stored_claims(new_signed_claims()) == {
+            "job_id": "fake-job-id",
+            "workflow_id": "fake-workflow-id",
+        }
 
     def test_ssh_rerun_property(self):
         publisher = CircleCIPublisher(
